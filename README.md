@@ -2,6 +2,10 @@
 
 A simple browser-based Snake game built using **HTML, CSS, and JavaScript**. Control the snake using the keyboard arrow keys, eat randomly positioned food, and grow longer as you play!
 
+🌐 Live Demo
+
+Play Snake Tummy here: https://snake-tummy.vercel.app/ 
+
 ## 🎮 Features
 
 * **Snake Movement:** Control the snake using the Up, Down, Left, and Right arrow keys.
