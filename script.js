@@ -6,7 +6,7 @@ const foodeating=new Audio("sounds/foodEating.mp3");
 const bonuseating=new Audio("sounds/bonusEating.mp3")
 const gamestart=new Audio("sounds/gamestart.mp3");
 const gameend=new Audio("sounds/gameend.mp3")
-const bgm=new Audio("sounds/bgm.mp3")
+const bgm=new Audio("sounds/Bgm.mp3")
 bgm.loop=true;
 bgm.volume=0.25;
 foodeating.preload="auto";
@@ -223,7 +223,9 @@ board.appendChild(foodElement);
 
 function endGame() {
     gameRunning = false;
-    stopped=true;
+    
+    bgm.pause();
+bgm.currentTime = 0;
     clearInterval(gameInterval);
     playSound(gameend);
     document.querySelector("#finalScore").textContent =
@@ -241,13 +243,15 @@ removeBonusFood();
     }
 function stopGame() {
     gameRunning = false;
-    stopped=true;
+    bgm.pause();
     clearInterval(gameInterval);
     document.querySelector("#switch").textContent = "Resume!";
 }
 function resumeGame() {
     gameRunning = true;
-    stopped=false;
+    bgm.play().catch(error => {
+        console.log("Background music could not play:", error);
+    });
     gameInterval = setInterval(movesnake, 170);
     document.querySelector("#switch").textContent = "Stop";
 }
@@ -329,7 +333,11 @@ gameInterval = setInterval(movesnake, 170);
 document.querySelector("#switch").textContent = "Stop";
 }
 document.querySelector("#switch").addEventListener("click", function() {
-    
+    if (bgm.paused) {
+    bgm.play().catch(error => {
+        console.log("Background music could not play:", error);
+    });
+}
     const gameOverVisible =
         document.querySelector("#gameOver").style.display === "block";
 
