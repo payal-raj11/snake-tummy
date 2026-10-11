@@ -1,11 +1,21 @@
 let gameRunning = false;
 let stopped=false;
 let gameInterval;
-
 const board=document.querySelector(".board");
+const foodeating=new Audio("sounds/foodEating.mp3");
+const bonuseating=new Audio("sounds/bonusEating.mp3")
+const gamestart=new Audio("sounds/gamestart.mp3");
+const gameend=new Audio("sounds/gameend.mp3")
+const bgm=new Audio("sounds/bgm.mp3")
+bgm.loop=true;
+bgm.volume=0.25;
+foodeating.preload="auto";
+bonuseating.preload="auto";
+foodeating.load();
+bonuseating.load();
 
 const cellsize=20;
-let score=0;
+let score=0; 
 const scoreElement=document.querySelector("#score");
 let snakeElements=[];
 let snake=[{x:5,y:1},
@@ -15,8 +25,11 @@ let snake=[{x:5,y:1},
 ,{x:5,y:4}];
 let direction = "UP";
 let nextDirection = "UP";
-
-
+let highestScore = Number(
+    localStorage.getItem("snakeTummyHighScore")
+) || 0;
+document.querySelector("#h_sc").textContent =
+        "highest Score: " + String(highestScore).padStart(4,"0");
 
 snake.forEach(function(part){
     let segment=document.createElement("div");
@@ -109,6 +122,7 @@ segment.style.top = preTail.y * cellsize + "px";
     snakeElements.push(segment);
 
     score++;
+    playSound(foodeating);
     scoreElement.textContent="Current Score=" +String(score).padStart(4,"0");
 let columns = Math.floor(board.clientWidth / cellsize);
 let rows = Math.floor(board.clientHeight / cellsize);
@@ -119,6 +133,38 @@ if (snake.length >= columns * rows) {
     food=randomFood();
     foodElement.style.left = food.x * cellsize + "px";
     foodElement.style.top = food.y * cellsize + "px";
+}
+//bonus collison
+if (
+    bonusFood &&
+    snake[0].x >= bonusFood.x &&
+    snake[0].x <= bonusFood.x + 1 &&
+    snake[0].y >= bonusFood.y &&
+    snake[0].y <= bonusFood.y + 1
+) {
+    let bonusPoints;
+
+    if (bonusRemaining >= 14) {
+        bonusPoints = 5;
+    }
+    else if (bonusRemaining >= 10) {
+        bonusPoints = 4;
+    }
+    else if (bonusRemaining >= 5) {
+        bonusPoints = 3;
+    }
+    else {
+        bonusPoints = 2;
+    }
+
+    score += bonusPoints;
+   playSound(bonuseating);
+    scoreElement.textContent =
+        "Current Score=" + String(score).padStart(4, "0");
+
+    growSnake(bonusPoints);
+    removeBonusFood();
+    bonusSpawnElapsed = 0;
 }
 };
 
@@ -179,13 +225,20 @@ function endGame() {
     gameRunning = false;
     stopped=true;
     clearInterval(gameInterval);
-
+    playSound(gameend);
     document.querySelector("#finalScore").textContent =
         "Your Score: " + score;
 
     document.querySelector("#gameOver").style.display = "block";
     document.querySelector("#switch").textContent = "Start Again!";
-}
+    if (score>highestScore){
+         highestScore = score;
+        localStorage.setItem("snakeTummyHighScore", highestScore);
+    }
+    document.querySelector("#h_sc").textContent =
+        "highest Score: " + String(highestScore).padStart(4,"0");  
+removeBonusFood();
+    }
 function stopGame() {
     gameRunning = false;
     stopped=true;
@@ -199,6 +252,7 @@ function resumeGame() {
     document.querySelector("#switch").textContent = "Stop";
 }
 function startGame() {
+    playSound(gamestart);
     clearInterval(gameInterval);
 
     // Remove the old snake
@@ -246,6 +300,8 @@ nextDirection = "UP";
 
         board.appendChild(segment);
         snakeElements.push(segment);
+        removeBonusFood();
+    bonusSpawnElapsed = 0;
     });
 
 
@@ -273,11 +329,13 @@ gameInterval = setInterval(movesnake, 170);
 document.querySelector("#switch").textContent = "Stop";
 }
 document.querySelector("#switch").addEventListener("click", function() {
+    
     const gameOverVisible =
         document.querySelector("#gameOver").style.display === "block";
 
     if (gameOverVisible) {
         startGame();
+        
     }
     else if (gameRunning ){
         stopGame();
@@ -286,3 +344,122 @@ document.querySelector("#switch").addEventListener("click", function() {
         resumeGame();
     }
 });
+
+//BONUS EFFECT
+let bonusFood = null;
+let bonusElement = null;
+
+let bonusSpawnElapsed = 0;
+let bonusRemaining = 0;
+//in seconds
+const bonusSpawnTime = 15; 
+const bonusDuration = 15;   
+
+let bonusTimerInterval;
+const bonusTimerElement = document.querySelector("#bonusTimer");
+
+function createBonusFood() {
+    let columns = Math.floor(board.clientWidth / cellsize);
+    let rows = Math.floor(board.clientHeight / cellsize);
+    let newFood;
+
+    do {
+        newFood = {
+            x: Math.floor(Math.random() * (columns - 1)),
+            y: Math.floor(Math.random() * (rows - 1))
+        };
+    } while (
+        snake.some(part =>
+            (part.x === newFood.x || part.x === newFood.x + 1) &&
+            (part.y === newFood.y || part.y === newFood.y + 1)
+        ) ||
+        (food.x >= newFood.x && food.x <= newFood.x + 1 &&
+         food.y >= newFood.y && food.y <= newFood.y + 1)
+    );
+
+    bonusFood = newFood;
+
+    bonusElement = document.createElement("div");
+    bonusElement.style.width = (cellsize * 2) + "px";
+    bonusElement.style.height = (cellsize * 2) + "px";
+    bonusElement.style.position = "absolute";
+    bonusElement.style.left = bonusFood.x * cellsize + "px";
+    bonusElement.style.top = bonusFood.y * cellsize + "px";
+    bonusElement.style.backgroundColor = "gold";
+    bonusElement.style.border = "2px solid orange";
+    bonusElement.style.borderRadius = "50%";
+    bonusElement.style.zIndex = "2";
+    bonusElement.classList.add("food-blink");
+
+    board.appendChild(bonusElement);
+
+    bonusRemaining = bonusDuration;
+bonusTimerElement.style.display = "block";
+bonusTimerFill.style.width = "100%";
+}
+
+function removeBonusFood() {
+    if (bonusElement) {
+        bonusElement.remove();
+    }
+
+    bonusFood = null;
+    bonusElement = null;
+    bonusRemaining = 0;
+    bonusTimerElement.style.display = "none";
+bonusTimerFill.style.width = "0%";
+}
+
+function updateBonusFood() {
+    if (!gameRunning) return;
+
+    if (bonusFood) {
+        bonusRemaining--;
+
+bonusTimerFill.style.width =
+    (bonusRemaining / bonusDuration * 100) + "%";
+
+        if (bonusRemaining <= 0) {
+            removeBonusFood();
+            bonusSpawnElapsed = 0;
+        }
+    } else {
+        bonusSpawnElapsed++;
+
+        if (bonusSpawnElapsed >= bonusSpawnTime) {
+            bonusSpawnElapsed = 0;
+            createBonusFood();
+        }
+    }
+}
+
+bonusTimerInterval = setInterval(updateBonusFood, 1000);
+
+function growSnake(amount) {
+    let tail = snake[snake.length - 1];
+
+    for (let i = 0; i < amount; i++) {
+        snake.push({ x: tail.x, y: tail.y });
+
+        let segment = document.createElement("div");
+        segment.style.width = cellsize + "px";
+        segment.style.height = cellsize + "px";
+        segment.style.backgroundColor = "green";
+        segment.style.position = "absolute";
+        segment.style.borderRadius = "8px";
+        segment.style.border = "2px solid #0c4f0f";
+        segment.style.left = tail.x * cellsize + "px";
+        segment.style.top = tail.y * cellsize + "px";
+
+        board.appendChild(segment);
+        snakeElements.push(segment);
+    }
+}
+
+//playing the sound
+function playSound(sound) {
+  sound.currentTime = 0;
+  sound.play().catch(error => {
+    console.log("Sound playback failed:", error);
+  });
+}
